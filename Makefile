@@ -1,4 +1,4 @@
-.PHONY: clean data lint requirements sync_data_down sync_data_up
+.PHONY: clean data lint requirements
 
 #################################################################################
 # GLOBALS                                                                       #
