@@ -1,18 +1,20 @@
 name: terra_mystica_models
+channels:
+  - conda-forge
 dependencies:
   - flake8
-  - pathlib2
   - pip
-  - setuptools
-  - wheel
   - ipython
   - jupyter
   - matplotlib
+  - altair
+  - seaborn
   - numpy
   - pandas
   - scikit-learn
+  - statsmodels
+  - black
+  - pre_commit
   - pip:
-    - awscli
     - python-dotenv
     - -e .
-  - python=3.7
