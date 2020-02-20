@@ -1,0 +1,18 @@
+name: terra_mystica_models
+dependencies:
+  - flake8
+  - pathlib2
+  - pip
+  - setuptools
+  - wheel
+  - ipython
+  - jupyter
+  - matplotlib
+  - numpy
+  - pandas
+  - scikit-learn
+  - pip:
+    - awscli
+    - python-dotenv
+    - -e .
+  - python=3.7
