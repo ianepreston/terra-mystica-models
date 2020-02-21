@@ -28,6 +28,7 @@ clean:
 
 ## Lint using flake8
 lint:
+	black terra_mystica_models
 	flake8 terra_mystica_models
 
 
