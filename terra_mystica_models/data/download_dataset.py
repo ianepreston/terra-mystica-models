@@ -20,8 +20,9 @@ def data_download():
     for json_string in json_strings:
         json_url = base_url + json_string
         json_path = raw_folder / json_string
-        with open(json_path, "w") as outfile:
-            json.dump(requests.get(json_url).json(), outfile)
+        if not json_path.exists():
+            with open(json_path, "w") as outfile:
+                json.dump(requests.get(json_url).json(), outfile)
     return True
 
 
