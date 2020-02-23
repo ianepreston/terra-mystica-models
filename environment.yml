@@ -5,7 +5,7 @@ dependencies:
   - flake8
   - pip
   - ipython
-  - jupyter
+  - jupyterlab
   - matplotlib
   - altair
   - seaborn
