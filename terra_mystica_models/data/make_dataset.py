@@ -2,6 +2,8 @@
 import click
 import datetime as dt
 import re
+import json
+import pandas as pd
 import logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
@@ -38,10 +40,26 @@ class TerraMysticaGame:
         """When was the game played?
 
         Returns
+        -------
         game_datetime: datetime
             When the game was played (finished)
         """
         return dt.datetime.strptime(self._raw_game["last_update"], "%Y-%m-%d %H:%M:%S")
+
+    @property
+    def game_options(self):
+        """What options are in place in the game?
+        
+        Returns
+        -------
+        options list: list
+            text list of options in effect
+        """
+        return [
+            key
+            for key in self._raw_game["events"]["global"]
+            if key.startswith("option-")
+        ]
 
     @property
     def base_map(self):
@@ -89,13 +107,14 @@ class TerraMysticaGame:
         for i in range(1, len(factions) + 1):
             order_key = f"order:{i}"
             for faction in factions:
-                if (
-                    "1"
-                    in self._raw_game["events"]["faction"][faction][order_key][
-                        "turn"
-                    ].keys()
-                ):
-                    selection_order_dict[faction] = i
+                if order_key in self._raw_game["events"]["faction"][faction].keys():
+                    if (
+                        "1"
+                        in self._raw_game["events"]["faction"][faction][order_key][
+                            "turn"
+                        ].keys()
+                    ):
+                        selection_order_dict[faction] = i
         return selection_order_dict
 
     @property
@@ -144,6 +163,13 @@ class TerraMysticaGame:
             for faction in self.factions
         }
 
+    @property
+    def victory_points_margin(self):
+        """How much did they win by?"""
+        vp = self.victory_points
+        min_vp = min(vp.values())
+        return {faction: points - min_vp for faction, points in vp.items()}
+
     def _check_player_count(self):
         """Make sure game data player count matches my faction count"""
         return self._raw_game["player_count"] == len(self.factions)
@@ -155,6 +181,130 @@ class TerraMysticaGame:
     def _is_played_on_original_map(self):
         """At least to start we'll want to restrict analysis to the original map"""
         return self.base_map == "126fe960806d587c78546b30f1a90853b1ada468"
+
+    def _has_nofaction_player(self):
+        """Some games have players using "nofaction", want to be able to exclude them"""
+        return any([faction.startswith("nofaction") for faction in self.factions])
+
+    def _has_expansion_factions(self):
+        """Is anyone playing as an expansion faction?
+        
+        I could just write in the expansion factions I know about, but I want this to be
+        extensible. So instead we'll just check for core factions and nofaction
+        (since it's captured elsewhere) and assume any other faction result must be
+        an expansion faction
+        """
+        core_factions = [
+            "alchemists",
+            "auren",
+            "chaosmagicians",
+            "cultists",
+            "darklings",
+            "dwarves",
+            "engineers",
+            "fakirs",
+            "giants",
+            "halflings",
+            "mermaids",
+            "nomads",
+            "swarmlings",
+            "witches",
+        ]
+        check_factions = [
+            faction for faction in self.factions if not faction.startswith("nofaction")
+        ]
+        return any(faction not in core_factions for faction in check_factions)
+
+    def _has_dropped_faction(self):
+        """Check if anyone dropped out"""
+        return any(key.startswith("drop") for key in self._raw_game["events"]["global"])
+
+    @property
+    def is_valid_game(self):
+        """Combine our criteria for inclusion in the model"""
+        valid_game_criteria = (
+            self._check_player_count()
+            & self._check_bonus_tile_count()
+            & self._is_played_on_original_map()
+            & (not self._has_nofaction_player())
+            & (not self._has_expansion_factions())
+            & (not self._has_dropped_faction())
+        )
+        return valid_game_criteria
+
+
+def _games_iterator():
+    """Generator for all the games in the JSON in raw
+
+    Yields
+    ------
+    game: TerraMysticaGame
+    """
+    raw_dir = Path(__file__).resolve().parents[2] / "data" / "raw"
+    for json_file in raw_dir.glob("*.json"):
+        with open(json_file) as f:
+            data = json.load(f)
+        for game in data:
+            yield TerraMysticaGame(game)
+
+
+def _game_to_dfs(
+    game: TerraMysticaGame, game_df: pd.DataFrame, player_df: pd.DataFrame
+):
+    """Append data from a Terra Mystica game to DataFrames"""
+    # only parse valid games
+    if not game.is_valid_game:
+        return False
+    if game.game_name in game_df.index:
+        # I've made the assumption that all game IDs are unique, want to fail loudly
+        # if that's invalid
+        raise IndexError(f"game {game.game_name} already in dataframe")
+    index = game.game_name
+    game_df.loc[index, "game_date"] = game.game_date
+    game_df.loc[index, "map"] = game.base_map
+    for option in game.game_options:
+        game_df.loc[index, option] = True
+    for faction, order in game.faction_selection_order.items():
+        game_df.loc[index, f"faction{order}"] = faction
+    for tile, order in game.scoring_tile_order.items():
+        game_df.loc[index, f"tile_round_{order}"] = tile
+    for tile in game.bonus_tiles:
+        game_df.loc[index, tile] = True
+    for faction, vp in game.victory_points.items():
+        game_df.loc[index, f"{faction}_vp"] = vp
+    for faction, vp in game.victory_points_margin.items():
+        game_df.loc[index, f"{faction}_vp_margin"] = vp
+
+    for faction, player_id in game.players.items():
+        if player_id in player_df.index:
+            player_df.loc[player_id, "games"] += 1
+            player_df.loc[player_id, "sum_vp"] += game.victory_points[faction]
+            player_df.loc[player_id, "sum_vp_margin"] += game.victory_points_margin[
+                faction
+            ]
+        else:
+            player_df.loc[player_id, "games"] = 1
+            player_df.loc[player_id, "sum_vp"] = game.victory_points[faction]
+            player_df.loc[player_id, "sum_vp_margin"] = game.victory_points_margin[
+                faction
+            ]
+    return True
+
+
+def games_to_dfs():
+    """Parse allll the games
+
+    Returns
+    -------
+    (game_df, player_df): (pd.DataFrame, pd.DataFrame)
+        game and player data
+    """
+    game_df = pd.DataFrame()
+    player_df = pd.DataFrame()
+    # will need to add some cleanup stuff later, but let's just try running this first
+    for game in _games_iterator():
+        _game_to_dfs(game, game_df, player_df)
+    return game_df, player_df
 
 
 @click.command()
