@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import click
+import itertools
 import datetime as dt
 import re
 import json
@@ -307,7 +308,7 @@ class TerraMysticaGame:
         df_dict.update(self.victory_points)
         df_dict.update(self.victory_points_margin)
         return pd.DataFrame.from_dict(
-            data=self.dataframe_dict, orient="index", columns=[self.game_name]
+            data=df_dict, orient="index", columns=[self.game_name]
         ).T
 
 
@@ -322,58 +323,29 @@ def _games_iterator():
     for json_file in raw_dir.glob("*.json"):
         with open(json_file) as f:
             data = json.load(f)
-        for game in data:
-            yield TerraMysticaGame(game)
+            for game in data:
+                yield TerraMysticaGame(game)
 
 
-def _game_to_dfs(game: TerraMysticaGame, game_df: pd.DataFrame):
-    """Append data from a Terra Mystica game to DataFrames"""
-    if game.game_name in game_df.index:
-        # I've made the assumption that all game IDs are unique, want to fail loudly
-        # if that's invalid
-        raise IndexError(f"game {game.game_name} already in dataframe")
-    index = game.game_name
-    # Add a bunch of validators here
-    # Get the full data set to start and then I can filter later since parsing
-    # All these games takes a long time
-    game_df.loc[index, "correct_player_count"] = game._check_player_count()
-    game_df.loc[index, "correct_bonus_tile_count"] = game._check_bonus_tile_count()
-    game_df.loc[index, "has_dropped_factions"] = game._has_dropped_faction()
-    game_df.loc[index, "on_original_map"] = game._is_played_on_original_map()
-    game_df.loc[index, "has_nofaction_player"] = game._has_nofaction_player()
-    game_df.loc[index, "has_expansion_factions"] = game._has_expansion_factions()
-    game_df.loc[index, "game_date"] = game.game_date
-    game_df.loc[index, "map"] = game.base_map
-    for option in game.game_options:
-        game_df.loc[index, option] = True
-    for faction, order in game.faction_selection_order.items():
-        game_df.loc[index, f"faction{order}"] = faction
-    for tile, order in game.scoring_tile_order.items():
-        game_df.loc[index, f"tile_round_{order}"] = tile
-    for tile in game.bonus_tiles:
-        game_df.loc[index, tile] = True
-    for faction, vp in game.victory_points.items():
-        game_df.loc[index, f"{faction}_vp"] = vp
-    for faction, vp in game.victory_points_margin.items():
-        game_df.loc[index, f"{faction}_vp_margin"] = vp
-    # for faction, player_id in game.players.items():
-    return True
-
-
-def games_to_dfs():
+def _games_to_df(limit=None):
     """Parse allll the games
 
+    Parameters
+    ----------
+    limit: int, default None
+        Max number of games to return, defaults to all of them
+    
     Returns
     -------
     (game_df, player_df): (pd.DataFrame, pd.DataFrame)
         game and player data
     """
-    game_df = pd.DataFrame()
-    player_df = pd.DataFrame()
-    # will need to add some cleanup stuff later, but let's just try running this first
-    for game in _games_iterator():
-        _game_to_dfs(game, game_df, player_df)
-    return game_df, player_df
+    if limit is None:
+        return pd.concat([game.dataframe_row for game in _games_iterator()])
+    else:
+        return pd.concat(
+            game.dataframe_row for game in itertools.islice(_games_iterator(), limit)
+        )
 
 
 @click.command()
