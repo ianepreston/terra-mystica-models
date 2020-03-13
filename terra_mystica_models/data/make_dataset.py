@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
-import click
 import itertools
 import datetime as dt
 import re
 import json
 import pandas as pd
-import logging
 from pathlib import Path
-from dotenv import find_dotenv, load_dotenv
 
 
 class TerraMysticaGame:
@@ -324,7 +321,7 @@ def _games_iterator():
         with open(json_file) as f:
             data = json.load(f)
             for game in data:
-                yield TerraMysticaGame(game)
+                yield {"file": json_file, "game": TerraMysticaGame(game)}
 
 
 def _games_to_df(limit=None):
@@ -341,33 +338,27 @@ def _games_to_df(limit=None):
         game and player data
     """
     if limit is None:
-        return pd.concat([game.dataframe_row for game in _games_iterator()])
+        games_it = _games_iterator()
     else:
-        return pd.concat(
-            game.dataframe_row for game in itertools.islice(_games_iterator(), limit)
-        )
+        games_it = itertools.islice(_games_iterator(), limit)
+    return pd.concat(
+        [
+            game["game"].dataframe_row
+            for game in games_it
+            # Nofaction messes things up, they don't have VP stored
+            if not game["game"]._has_nofaction_player()
+        ]
+    )
 
 
-@click.command()
-@click.argument("input_filepath", type=click.Path(exists=True))
-@click.argument("output_filepath", type=click.Path())
-def main(input_filepath, output_filepath):
+def main():
     """ Runs data processing scripts to turn raw data from (../raw) into
         cleaned data ready to be analyzed (saved in ../processed).
     """
-    logger = logging.getLogger(__name__)
-    logger.info("making final data set from raw data")
+    games_df = _games_to_df()
+    interim_dir = Path(__file__).resolve().parents[2] / "data" / "interim"
+    games_df.to_csv(interim_dir / "all_valid_games.csv")
 
 
 if __name__ == "__main__":
-    log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
-
-    # not used in this stub but often useful for finding various files
-    project_dir = Path(__file__).resolve().parents[2]
-
-    # find .env automagically by walking up directories until it's found, then
-    # load up the .env entries as environment variables
-    load_dotenv(find_dotenv())
-
     main()
