@@ -343,7 +343,7 @@ def _games_to_df(limit=None):
         games_it = itertools.islice(_games_iterator(), limit)
     return pd.concat(
         [
-            game["game"].dataframe_row
+            game["game"].dataframe_row.assign(file=game["file"].name)
             for game in games_it
             # Nofaction messes things up, they don't have VP stored
             if not game["game"]._has_nofaction_player()
