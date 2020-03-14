@@ -5,8 +5,8 @@ the 1st of the month.
 The data is in JSON, with the following schema:
 
 - toplevel - list of games
-  - game - Id of game
-  - last_updated - Timestamp for when the game finished
+  - game - Id of game (does not appear to need to be unique)
+  - last_update - Timestamp for when the game finished
   - player_count - number of players in the game (at start)
   - factions - list of players / factions
     - player - username of player
@@ -61,3 +61,8 @@ The data is in JSON, with the following schema:
         - town:* - Taking this town tile
         - upgrade:* - Creating one of these buildings by upgrading
         - vp: Number of VP received (from any source)
+      - location - 
+        - * - Information on a specific faction
+          - all: list of locations... held? I'm not sure
+          * - by round list of locations, appears to be unique for each round so I assume it's when something was added
+  - base_map - big long string representing the game board, how is still TBD
