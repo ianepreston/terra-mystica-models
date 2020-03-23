@@ -218,8 +218,8 @@ class TerraMysticaGame:
     def victory_points_margin(self):
         """How much did they win by?"""
         vp = self.victory_points
-        min_vp = min(vp.values())
-        return {f"{player}_margin": points - min_vp for player, points in vp.items()}
+        mean_vp = sum(vp.values()) / len(vp.values())
+        return {f"{player}_margin": points - mean_vp for player, points in vp.items()}
 
     def _check_player_count(self):
         """Make sure game data player count matches my faction count"""
