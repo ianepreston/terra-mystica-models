@@ -218,8 +218,8 @@ class TerraMysticaGame:
     def victory_points_margin(self):
         """How much did they win by?"""
         vp = self.victory_points
-        min_vp = min(vp.values())
-        return {f"{player}_margin": points - min_vp for player, points in vp.items()}
+        mean_vp = sum(vp.values()) / len(vp.values())
+        return {f"{player}_margin": points - mean_vp for player, points in vp.items()}
 
     def _check_player_count(self):
         """Make sure game data player count matches my faction count"""
@@ -343,7 +343,7 @@ def _games_to_df(limit=None):
         games_it = itertools.islice(_games_iterator(), limit)
     return pd.concat(
         [
-            game["game"].dataframe_row
+            game["game"].dataframe_row.assign(file=game["file"].name)
             for game in games_it
             # Nofaction messes things up, they don't have VP stored
             if not game["game"]._has_nofaction_player()

@@ -6,11 +6,14 @@ dependencies:
   - pip
   - ipython
   - jupyterlab
-  - matplotlib
+  - ipywidgets
+  - nodejs
+  - widgetsnbextension
   - altair
   - seaborn
   - numpy
   - pandas
+  - pandas-profiling
   - scikit-learn
   - statsmodels
   - black
