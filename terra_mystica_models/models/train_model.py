@@ -84,7 +84,7 @@ def score_turn_model(predict_df):
     score_cols = [
         col
         for col in predict_df.columns
-        if re.match(score_regex, col) and not col.endswith("SCORE1")
+        if re.match(score_regex, col) and not col.endswith("SCORE2")
     ]
     x_cols = ["player_num"] + faction_cols + bonus_cols + score_cols
     y = predict_df["vp_margin"]
