@@ -78,12 +78,16 @@ def player_level_df():
     # Make dummy variables for the categorical columns
     drop_cols = ["faction", "game_name"]
     drop_cols.extend([f"score_turn_{i}" for i in range(1, 7)])
-    dummy_cols = ["player_num", "faction"]
+    dummy_cols = ["faction"]
     dummy_cols.extend([f"score_turn_{i}" for i in range(1, 7)])
     dummy_frames = [
-        pd.get_dummies(recombined_df[col], prefix=col, drop_first=True)
-        for col in dummy_cols
+        pd.get_dummies(recombined_df[col], prefix=col) for col in dummy_cols
     ]
+    dummy_frames.append(
+        pd.get_dummies(
+            recombined_df["player_num"], prefix="player_num", drop_first=True
+        )
+    )
     predict_list = dummy_frames + [recombined_df.drop(columns=drop_cols)]
     predict_df = pd.concat(predict_list, axis="columns")
     # Add all the interaction terms, this is what we're actually interested in

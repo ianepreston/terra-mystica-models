@@ -13,7 +13,7 @@ def simple_model(predict_df):
     ]
     y = predict_df["vp_margin"]
     x_cols = ["player_num"] + faction_cols
-    X = sm.add_constant(predict_df[x_cols])
+    X = sm.add_constant(predict_df[x_cols].drop(columns=["faction_alchemist"]))
     lin_model = sm.OLS(y, X).fit()
     return lin_model
 
@@ -29,7 +29,9 @@ def base_score_model(predict_df):
     score_cols = [col for col in predict_df.columns if col.startswith("SCORE")]
     x_cols = ["player_num"] + faction_cols + bonus_cols + score_cols
     y = predict_df["vp_margin"]
-    X = sm.add_constant(predict_df[x_cols].drop(columns=["BON1", "SCORE1"])).astype(int)
+    X = sm.add_constant(
+        predict_df[x_cols].drop(columns=["BON1", "SCORE2", "faction_alchemist"])
+    ).astype(int)
     lin_model = sm.OLS(y, X).fit()
     return lin_model
 
@@ -55,11 +57,11 @@ def interact_model(predict_df):
     score_cols = [
         col
         for col in predict_df.columns
-        if re.match(score_regex, col) and not col.endswith("SCORE1")
+        if re.match(score_regex, col) and not col.endswith("SCORE2")
     ]
     x_cols = ["player_num"] + faction_cols + bonus_cols + score_cols
     y = predict_df["vp_margin"]
-    X = sm.add_constant(predict_df[x_cols]).astype(int)
+    X = predict_df[x_cols].astype(int)
     lin_model = sm.OLS(y, X).fit()
     return lin_model
 
@@ -69,11 +71,6 @@ def score_turn_model(predict_df):
     
     Now we add in which turn the score tile is active for
     """
-    faction_cols = [
-        col
-        for col in predict_df.columns
-        if col.startswith("faction_") and "_x_" not in col
-    ]
     bonus_regex = r"faction_\w+_x_BON\d+"
     bonus_cols = [
         col
@@ -86,8 +83,8 @@ def score_turn_model(predict_df):
         for col in predict_df.columns
         if re.match(score_regex, col) and not col.endswith("SCORE2")
     ]
-    x_cols = ["player_num"] + faction_cols + bonus_cols + score_cols
+    x_cols = ["player_num"] + bonus_cols + score_cols
     y = predict_df["vp_margin"]
-    X = sm.add_constant(predict_df[x_cols]).astype(int)
+    X = predict_df[x_cols].astype(int)
     lin_model = sm.OLS(y, X).fit()
     return lin_model
