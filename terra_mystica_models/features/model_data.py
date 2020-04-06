@@ -90,6 +90,10 @@ def player_level_df():
     )
     predict_list = dummy_frames + [recombined_df.drop(columns=drop_cols)]
     predict_df = pd.concat(predict_list, axis="columns")
+    # SCORE1 Should never be in round 5 or 6
+    for turn in [5, 6]:
+        if f"score_turn_{turn}_SCORE1" in predict_df.columns:
+            predict_df = predict_df.drop(columns=[f"score_turn_{turn}_SCORE1"])
     # Add all the interaction terms, this is what we're actually interested in
     faction_cols = [col for col in predict_df.columns if col.startswith("faction_")]
     non_interact_cols = ["vp_margin", "player_num"]
