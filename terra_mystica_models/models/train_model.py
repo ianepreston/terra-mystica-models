@@ -71,6 +71,11 @@ def score_turn_model(predict_df):
     
     Now we add in which turn the score tile is active for
     """
+    faction_cols = [
+        col
+        for col in predict_df.columns
+        if col.startswith("faction_") and "_x_" not in col
+    ]
     bonus_regex = r"faction_\w+_x_BON\d+"
     bonus_cols = [
         col
@@ -83,8 +88,39 @@ def score_turn_model(predict_df):
         for col in predict_df.columns
         if re.match(score_regex, col) and not col.endswith("SCORE2")
     ]
-    x_cols = ["player_num"] + bonus_cols + score_cols
+    x_cols = ["player_num"] + faction_cols + bonus_cols + score_cols
     y = predict_df["vp_margin"]
     X = predict_df[x_cols].astype(int)
     lin_model = sm.OLS(y, X).fit()
     return lin_model
+
+
+def faction_level_models(predict_df):
+    """Make a model for each faction, return a dictionary of faction models"""
+    faction_cols = [
+        col
+        for col in predict_df.columns
+        if col.startswith("faction_") and "_x_" not in col
+    ]
+    factions = [col.replace("faction_", "") for col in faction_cols]
+    model_dict = dict()
+    for faction in factions:
+        fact_df = predict_df.loc[predict_df[f"faction_{faction}"] == 1].copy()
+        bonus_regex = r"BON\d+"
+        bonus_cols = [
+            col
+            for col in fact_df.columns
+            if re.match(bonus_regex, col) and not col.endswith("BON1")
+        ]
+        score_regex = r"score_turn_\d_SCORE\d+"
+        score_cols = [
+            col
+            for col in fact_df.columns
+            if re.match(score_regex, col) and not col.endswith("SCORE2")
+        ]
+        x_cols = ["player_num"] + bonus_cols + score_cols
+        y = fact_df["vp_margin"]
+        X = fact_df[x_cols].astype(int)
+        lin_model = sm.OLS(y, X).fit()
+        model_dict[faction] = lin_model
+    return model_dict
