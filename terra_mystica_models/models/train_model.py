@@ -1,6 +1,8 @@
 """Train some models!"""
 import re
+from pathlib import Path
 import statsmodels.api as sm
+from terra_mystica_models.features.model_data import player_level_df
 
 
 def simple_model(predict_df):
@@ -123,4 +125,43 @@ def faction_level_models(predict_df):
         X = fact_df[x_cols].astype(int)
         lin_model = sm.OLS(y, X).fit()
         model_dict[faction] = lin_model
+    return model_dict
+
+
+def export_models():
+    """Save the fitted models to file"""
+    model_folder = Path(__file__).resolve().parents[2] / "models"
+    predict_df = player_level_df()
+    score_turn_fit = score_turn_model(predict_df)
+    score_turn_file = model_folder / "score_turn_model.pickle"
+    # Have to call summary to generate model data (lazy loading)
+    _ = score_turn_fit.summary()
+    # Save the model, don't save data, that makes it 2GB
+    score_turn_fit.save(fname=str(score_turn_file), remove_data=True)
+    faction_models = faction_level_models(predict_df)
+    faction_model_folder = model_folder / "faction_models"
+    faction_model_folder.mkdir(exist_ok=True)
+    for faction, model in faction_models.items():
+        model_file = f"{faction}.pickle"
+        model_path = faction_model_folder / model_file
+        # Have to call summary to generate model data (lazy loading)
+        _ = model.summary()
+        model.save(fname=str(model_path), remove_data=True)
+    return True
+
+
+def load_score_turn_model():
+    """Load a saved version of the score turn model"""
+    model_folder = Path(__file__).resolve().parents[2] / "models"
+    score_turn_file = model_folder / "score_turn_model.pickle"
+    score_turn_model = sm.load(str(score_turn_file))
+    return score_turn_model
+
+
+def load_faction_models():
+    """Load saved versions of each faction's model"""
+    model_folder = Path(__file__).resolve().parents[2] / "models" / "faction_models"
+    model_dict = {
+        file.stem: sm.load(str(file)) for file in model_folder.glob("*.pickle")
+    }
     return model_dict
