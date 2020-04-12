@@ -1,5 +1,7 @@
 # Saved models
 models/*
+# Saved reports
+reports/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
