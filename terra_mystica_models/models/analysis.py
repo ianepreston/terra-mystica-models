@@ -29,20 +29,30 @@ _BONUSES = [f"BON{i}" for i in range(1, 11)]
 
 def _combo_generator(fraction_scenarios, include_factions=True):
     """Create scenarios for the model to predict"""
+    # Set a seed so we get the same scenarios every time this is run
     random.seed(42)
+    # All possible draws from the scores for 6 turns (can't have SCORE1 in the last turns)
     score_permutes = [
         scores for scores in permutations(_SCORES, 6) if "SCORE1" not in scores[4:]
     ]
+    # All possible draws for bonus tiles, order doesn't matter here
     bonus_combos = [bonuses for bonuses in combinations(_BONUSES, 7)]
+    # Pick some fraction of all possible scores for inclusion
+    # Doing these draws with replacement since that's how it would work in reality
     random_scores = random.choices(
         score_permutes, k=int(len(score_permutes) * fraction_scenarios)
     )
+    # Same thing for bonuses
     random_bonuses = random.choices(
         bonus_combos, k=int(len(bonus_combos) * fraction_scenarios)
     )
+    # All the combos are the cartesian product of our pool of scores and bonuses
     products = [random_scores, random_bonuses]
+    # If Faction is a feature of the model (as opposed to faction specific models)
+    # we have to include it in the combos product
     if include_factions:
         products.append(_FACTIONS)
+    # Create a generator of all the scenarios we've specified.
     random_combos = (prod for prod in product(*products))
     return random_combos
 
@@ -75,22 +85,30 @@ class ScoreTurnModelAnalysis:
         predict_in: pd.DataFrame
             Dataframe with one row with a scenario in the correct input format
         """
+        # Start with all input parameters set to 0
         input_series = pd.Series(index=self._stm.params.index, data=0)
+        # Player number is 1-4 so just take the average
+        # Doesn't really matter since we're just comparing cross faction performance
         input_series.loc["player_num"] = 2.5
+        # Guess I could have made the combo a named tuple to make this a bit clearer
         score_seq = combo[0]
         bon_seq = combo[1]
         faction = combo[2]
+        # Identify faction
         faction_index = f"faction_{faction}"
         if faction_index in input_series.index:
             input_series.loc[faction_index] = 1
+        # Populate the 6 score turn interaction rows
         for num, score in enumerate(score_seq, 1):
             index = f"faction_{faction}_x_score_turn_{num}_{score}"
             if index in input_series.index:
                 input_series.loc[index] = 1
+        # Populate the bonus interaction rows
         for bonus in bon_seq:
             index = f"faction_{faction}_x_{bonus}"
             if index in input_series.index:
                 input_series.loc[index] = 1
+        # Get the input in the right shape for prediction
         predict_in = input_series.to_frame().T
         return predict_in
 
@@ -115,14 +133,27 @@ class ScoreTurnModelAnalysis:
         return self._scenario_df
 
     def _calc_clean_df(self):
-        """Compute a clean dataframe describing the scenarios and their predicted outcomes"""
+        """Compute a clean dataframe describing the scenarios and their predicted outcomes
+        
+        The format that comes out of the scenario DF is hard to read, it has a bunch of
+        interaction terms and is sparse. Turn each combo into an easier to read frame
+        along with it's predicted score for each faction
+        """
         scenario_df = self.scenario_df.copy()
+        # Create a new dataframe of the correct size
         clean_df = pd.DataFrame(index=scenario_df.index)
         clean_df["predicted_margin"] = self._stm.predict(scenario_df)
         faction_cols = [f"faction_{faction}" for faction in _FACTIONS]
+        # Only the interaction columns for the faction played will have 1
+        # this will return the column with that 1, which can then be used to identify the
+        # faction for that scenario
         clean_df["faction"] = (
             scenario_df[faction_cols].idxmax(axis="columns").str.replace("faction_", "")
         )
+        # Use similar logic to the above to ID the scoring tile for each turn
+        # Note that SCORE2 is excluded from the interaction terms to avoid
+        # multicollinearity, so we also have to check if the max is 0, which would imply
+        # that the tile for that turn was SCORE2
         for i in range(1, 7):
             rgx = f"faction_\w+_x_score_turn_{i}_"
             col = f"score_turn_{i}"
@@ -133,6 +164,8 @@ class ScoreTurnModelAnalysis:
             )
             score2_mask = scenario_df.filter(regex=rgx).max(axis="columns") == 0
             clean_df.loc[score2_mask, col] = "SCORE2"
+        # Same idea for bonus tiles, BON1 is excluded so we have to infer its presence
+        # based on the sum of the identified tiles
         for i in range(1, 11):
             col = f"BON{i}"
             rgx = f"faction_\w+_BON{i}"
@@ -143,6 +176,8 @@ class ScoreTurnModelAnalysis:
         indexes = [f"score_turn_{i}" for i in range(1, 7)] + [
             f"BON{i}" for i in range(1, 11)
         ]
+        # Pivot the results so that each score/bonus combo is a row and each faction's
+        # predicted margin is a column
         pivot_result = clean_df.pivot_table(
             values="predicted_margin", columns="faction", index=indexes
         )
@@ -165,6 +200,14 @@ class FactionModelAnalysis:
         fraction_scenarios: float, default 0.01
             There's 15 million possible Terra Mystica setups, we only want to take
             a subsample of those possibilities or else the computer just chugs forever
+        
+        
+        TODO
+        ----
+        There's a lot of overlap code in this with the ScoreTurnModelAnalysis class
+        If I end up making a third model it will probably be worth the effor to write
+        up a base class and have them both inherit from it. As it is I'm lazy so I'm
+        just going to leave it.
         """
         self._fraction_scenarios = fraction_scenarios
         self._faction_models = train_model.load_faction_models()
@@ -183,6 +226,7 @@ class FactionModelAnalysis:
         -------
         predict_in: pd.DataFrame
             Dataframe with one row with a scenario in the correct input format
+        
         """
         # Doesn't matter which faction I use for this, they all have the same parameters
         model = self._faction_models["alchemists"]
