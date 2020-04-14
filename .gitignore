@@ -3,6 +3,9 @@ models/*
 # Saved reports
 reports/*
 
+#d6tflow stuff
+d6tflow_output/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

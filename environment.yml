@@ -22,4 +22,5 @@ dependencies:
   - requests
   - pip:
     - python-dotenv
+    - d6tflow
     - -e .
