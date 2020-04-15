@@ -7,7 +7,7 @@
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 PROJECT_NAME = terra_mystica_models
 PYTHON_VERSION = 3.7
-PYTHON_INTERPRETER = python3.7
+PYTHON_INTERPRETER = python
 
 
 #################################################################################
