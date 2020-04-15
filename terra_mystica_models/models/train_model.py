@@ -8,12 +8,11 @@ import re
 
 import d6tflow
 import statsmodels.api as sm
-from luigi.util import requires
 
 from terra_mystica_models.features.model_data import TaskPlayerLevelData
 
 
-@requires(TaskPlayerLevelData)
+@d6tflow.requires(TaskPlayerLevelData)
 class TaskSimpleModel(d6tflow.tasks.TaskPickle):
     def run(self):
         """Very straightforward model just to make sure we have things well specified"""
@@ -33,7 +32,7 @@ class TaskSimpleModel(d6tflow.tasks.TaskPickle):
         self.save(lin_model)
 
 
-@requires(TaskPlayerLevelData)
+@d6tflow.requires(TaskPlayerLevelData)
 class TaskBaseScoreModel(d6tflow.tasks.TaskPickle):
     def run(self):
         """Do I have to account for the scoring tile dummies in my model?"""
@@ -56,7 +55,7 @@ class TaskBaseScoreModel(d6tflow.tasks.TaskPickle):
         self.save(lin_model)
 
 
-@requires(TaskPlayerLevelData)
+@d6tflow.requires(TaskPlayerLevelData)
 class TaskInteractModel(d6tflow.tasks.TaskPickle):
     def run(self):
         """See how score and bonus tiles interact with player choice
@@ -91,7 +90,7 @@ class TaskInteractModel(d6tflow.tasks.TaskPickle):
         self.save(lin_model)
 
 
-@requires(TaskPlayerLevelData)
+@d6tflow.requires(TaskPlayerLevelData)
 class TaskScoreTurnModel(d6tflow.tasks.TaskPickle):
     def run(self):
         """See how score and bonus tiles interact with player choice
@@ -125,7 +124,7 @@ class TaskScoreTurnModel(d6tflow.tasks.TaskPickle):
         self.save(lin_model)
 
 
-@requires(TaskPlayerLevelData)
+@d6tflow.requires(TaskPlayerLevelData)
 class TaskFactionLevelModels(d6tflow.tasks.TaskPickle):
     def run(self):
         """Make a model for each faction, return a dictionary of faction models"""
@@ -159,3 +158,8 @@ class TaskFactionLevelModels(d6tflow.tasks.TaskPickle):
             lin_model.remove_data()
             model_dict[faction] = lin_model
         self.save(model_dict)
+
+
+if __name__ == "__main__":
+    d6tflow.run(TaskScoreTurnModel())
+    d6tflow.run(TaskFactionLevelModels())
