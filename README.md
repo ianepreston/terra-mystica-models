@@ -1,10 +1,23 @@
-Terra Mystica Models
-==============================
+# Terra Mystica Models
 
 Predict outcomes of terra mystica games
 
-Project Organization
-------------
+## Setup
+For Mac/*NIX systems the only external requirement for this project is ```conda```. If you don't have it already you can install it [here](https://docs.conda.io/en/latest/miniconda.html). Grab the Python 3.7 version for your operating system. For Windows it's a bit more complicated [this guide](https://ianepreston.github.io/2020/02/15/windows-ds-software.html) will help you get set up.
+
+Once that's done from this a terminal in this folder run the following commands to download the data and produce the analysis:
+
+```bash
+# Set up the conda environment with dependencies and the terra_mystica_models package
+make create_environment
+# everything else needs to be run from within that environment
+conda activate terra_mystica_models
+# Download the data, transform it, fit a model, and run some game scenarios
+make analysis
+```
+
+## Project Organization
+
 
     ├── LICENSE
     ├── Makefile           <- Makefile with commands like `make data` or `make train`
