@@ -21,7 +21,7 @@ class TaskCleanData(d6tflow.tasks.TaskCSVPandas):
         # all_games_df = pd.read_csv(
         #     interim_csv, parse_dates=["date"], index_col=0, low_memory=False
         # )
-        all_games_df = self.input().load()
+        all_games_df = self.input().load(parse_dates=["date"], low_memory=False)
         # Do some validation
         assert all(all_games_df["player_count_valid"])
         assert not any(all_games_df["has_nofaction_players"])
