@@ -40,7 +40,7 @@ def data_download(cutoff_date=True):
         for link in soup.find_all("a", {"href": re.compile(r"\d{4}-\d{2}.json")})
     ]
     raw_folder = Path(__file__).resolve().parents[2] / "data" / "raw"
-    assert raw_folder.exists()
+    raw_folder.mkdir(parents=True, exist_ok=True)
     for json_string in json_strings:
         json_url = base_url + json_string
         json_path = raw_folder / json_string
