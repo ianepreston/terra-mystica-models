@@ -41,9 +41,9 @@ def _player_n_frame(base_df, n):
 class TaskPlayerLevelData(d6tflow.tasks.TaskCSVPandas):
     def run(self):
         """Take the game level data and break it out into outcomes per player"""
+        base_df = self.input().load()
         score_cols = [f"score_turn_{i}" for i in range(1, 7)]
         bon_cols = [f"BON{i}" for i in range(1, 11)]
-        base_df = self.input().load()
         game_level_info = (
             base_df.reindex(columns=score_cols + bon_cols)
             .reset_index()
