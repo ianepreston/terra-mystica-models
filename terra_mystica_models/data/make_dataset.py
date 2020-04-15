@@ -373,5 +373,9 @@ class TaskGetData(d6tflow.tasks.TaskCSVPandas):
         self.save(game_df)
 
 
-if __name__ == "__main__":
+def main():
     d6tflow.run(TaskGetData())
+
+
+if __name__ == "__main__":
+    main()

@@ -51,6 +51,15 @@ create_environment:
 data: requirements
 	$(PYTHON_INTERPRETER) terra_mystica_models/data/make_dataset.py
 
+
+## Model
+model: requirements
+	$(PYTHON_INTERPRETER) terra_mystica_models/models/train_model.py
+
+## Model analysis
+analysis: requirements
+	$(PYTHON_INTERPRETER) terra_mystica_models/models/analysis.py
+
 #################################################################################
 # Self Documenting Commands                                                     #
 #################################################################################
