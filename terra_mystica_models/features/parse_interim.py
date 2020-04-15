@@ -2,12 +2,11 @@
 clean it up as necessary for actual analysis
 """
 import d6tflow
-from luigi.util import requires
 
 from terra_mystica_models.data.make_dataset import TaskGetData
 
 
-@requires(TaskGetData)
+@d6tflow.requires(TaskGetData)
 class TaskCleanData(d6tflow.tasks.TaskCSVPandas):
     def run(self):
         """Generate the interim data CSV if necessary and load it to a dataframe

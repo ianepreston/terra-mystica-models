@@ -1,11 +1,10 @@
 """Filter down to just the games we care about"""
 import d6tflow
-from luigi.util import requires
 
 from terra_mystica_models.features.parse_interim import TaskCleanData
 
 
-@requires(TaskCleanData)
+@d6tflow.requires(TaskCleanData)
 class TaskModelGamesData(d6tflow.tasks.TaskCSVPandas):
     """Filter to the subset of games we care about"""
 

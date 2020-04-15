@@ -1,7 +1,6 @@
 """Generate the data to be used for modeling and its features"""
 import d6tflow
 import pandas as pd
-from luigi.util import requires
 
 from terra_mystica_models.features.model_subset import TaskModelGamesData
 
@@ -37,7 +36,7 @@ def _player_n_frame(base_df, n):
     return player_n_df
 
 
-@requires(TaskModelGamesData)
+@d6tflow.requires(TaskModelGamesData)
 class TaskPlayerLevelData(d6tflow.tasks.TaskCSVPandas):
     def run(self):
         """Take the game level data and break it out into outcomes per player"""
