@@ -160,6 +160,10 @@ class TaskFactionLevelModels(d6tflow.tasks.TaskPickle):
         self.save(model_dict)
 
 
-if __name__ == "__main__":
+def main():
     d6tflow.run(TaskScoreTurnModel())
     d6tflow.run(TaskFactionLevelModels())
+
+
+if __name__ == "__main__":
+    main()

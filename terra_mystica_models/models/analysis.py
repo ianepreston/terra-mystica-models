@@ -256,6 +256,10 @@ class TaskFactionModelAnalysis(d6tflow.tasks.TaskCSVPandas):
         self.save(self._calc_clean_df())
 
 
-if __name__ == "__main__":
+def main():
     d6tflow.run(TaskScoreTurnModelAnalysis())
     d6tflow.run(TaskFactionModelAnalysis())
+
+
+if __name__ == "__main__":
+    main()
