@@ -44,11 +44,11 @@ def _combo_generator(fraction_scenarios, include_factions=True):
     # Pick some fraction of all possible scores for inclusion
     # Doing these draws with replacement since that's how it would work in reality
     random_scores = random.choices(
-        score_permutes, k=int(len(score_permutes) * fraction_scenarios)
+        score_permutes, k=max(1, int(len(score_permutes) * fraction_scenarios))
     )
     # Same thing for bonuses
     random_bonuses = random.choices(
-        bonus_combos, k=int(len(bonus_combos) * fraction_scenarios)
+        bonus_combos, k=max(1, int(len(bonus_combos) * fraction_scenarios))
     )
     # All the combos are the cartesian product of our pool of scores and bonuses
     products = [random_scores, random_bonuses]
