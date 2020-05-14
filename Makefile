@@ -7,7 +7,7 @@
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 PROJECT_NAME = terra_mystica_models
 PYTHON_VERSION = 3.7
-PYTHON_INTERPRETER = python3.7
+PYTHON_INTERPRETER = python
 
 
 #################################################################################
@@ -50,6 +50,15 @@ create_environment:
 ## Make Dataset
 data: requirements
 	$(PYTHON_INTERPRETER) terra_mystica_models/data/make_dataset.py
+
+
+## Model
+model: requirements
+	$(PYTHON_INTERPRETER) terra_mystica_models/models/train_model.py
+
+## Model analysis
+analysis: requirements
+	$(PYTHON_INTERPRETER) terra_mystica_models/models/analysis.py
 
 #################################################################################
 # Self Documenting Commands                                                     #

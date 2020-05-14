@@ -1,4 +1,7 @@
-"""Take data from a game dataframe and compute player stats"""
+"""Take data from a game dataframe and compute player stats
+
+Haven't actually used this in any models yet
+"""
 import pandas as pd
 
 

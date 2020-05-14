@@ -1,10 +1,13 @@
-# -*- coding: utf-8 -*-
-import itertools
 import datetime as dt
-import re
+import itertools
 import json
-import pandas as pd
+import re
 from pathlib import Path
+
+import d6tflow
+import pandas as pd
+
+from terra_mystica_models.data.download_dataset import data_download
 
 
 class TerraMysticaGame:
@@ -351,13 +354,27 @@ def _games_to_df(limit=None):
     )
 
 
-def main():
-    """ Runs data processing scripts to turn raw data from (../raw) into
-        cleaned data ready to be analyzed (saved in ../processed).
+class TaskGetData(d6tflow.tasks.TaskCSVPandas):
     """
-    games_df = _games_to_df()
-    interim_dir = Path(__file__).resolve().parents[2] / "data" / "interim"
-    games_df.to_csv(interim_dir / "all_valid_games.csv")
+    Download the JSON files if necessary, then convert them into a DataFrame
+
+    TODO
+    ----
+    add an option to get JSON beyond the cutoff date
+    add an option to load a limited number of games
+    """
+
+    def run(self):
+        # This will only download missing JSON files
+        data_download()
+        # Read the games into a dataframe
+        game_df = _games_to_df()
+        # Save the result to CSV
+        self.save(game_df)
+
+
+def main():
+    d6tflow.run(TaskGetData())
 
 
 if __name__ == "__main__":

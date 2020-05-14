@@ -1,11 +1,15 @@
 """Analyse the results of the models"""
 import random
 from itertools import combinations, permutations, product
-from pathlib import Path
 
+import d6tflow
+import luigi
 import pandas as pd
 
-from terra_mystica_models.models import train_model
+from terra_mystica_models.models.train_model import (
+    TaskFactionLevelModels,
+    TaskScoreTurnModel,
+)
 
 _FACTIONS = [
     "alchemists",
@@ -40,11 +44,11 @@ def _combo_generator(fraction_scenarios, include_factions=True):
     # Pick some fraction of all possible scores for inclusion
     # Doing these draws with replacement since that's how it would work in reality
     random_scores = random.choices(
-        score_permutes, k=int(len(score_permutes) * fraction_scenarios)
+        score_permutes, k=max(1, int(len(score_permutes) * fraction_scenarios))
     )
     # Same thing for bonuses
     random_bonuses = random.choices(
-        bonus_combos, k=int(len(bonus_combos) * fraction_scenarios)
+        bonus_combos, k=max(1, int(len(bonus_combos) * fraction_scenarios))
     )
     # All the combos are the cartesian product of our pool of scores and bonuses
     products = [random_scores, random_bonuses]
@@ -57,20 +61,9 @@ def _combo_generator(fraction_scenarios, include_factions=True):
     return random_combos
 
 
-class ScoreTurnModelAnalysis:
-    def __init__(self, fraction_scenarios=0.01):
-        """Generate scenario games and see how the big fat model performs
-        
-        Parameters
-        ----------
-        fraction_scenarios: float, default 0.01
-            There's 15 million possible Terra Mystica setups, we only want to take
-            a subsample of those possibilities or else the computer just chugs forever
-        """
-        self._fraction_scenarios = fraction_scenarios
-        self._stm = train_model.load_score_turn_model()
-        self._scenario_df = None
-        self._clean_df = None
+@d6tflow.requires(TaskScoreTurnModel)
+class TaskScoreTurnModelAnalysis(d6tflow.tasks.TaskCSVPandas):
+    _fraction_scenarios = luigi.FloatParameter(default=0.01)
 
     def _gen_scenario(self, combo):
         """Take some combination of scores, bonuses and faction and put it in a format
@@ -86,7 +79,8 @@ class ScoreTurnModelAnalysis:
             Dataframe with one row with a scenario in the correct input format
         """
         # Start with all input parameters set to 0
-        input_series = pd.Series(index=self._stm.params.index, data=0)
+        _stm = self.input().load()
+        input_series = pd.Series(index=_stm.params.index, data=0)
         # Player number is 1-4 so just take the average
         # Doesn't really matter since we're just comparing cross faction performance
         input_series.loc["player_num"] = 2.5
@@ -125,13 +119,6 @@ class ScoreTurnModelAnalysis:
         )
         return scenario_df
 
-    @property
-    def scenario_df(self):
-        """A number of scenarios to feed into the predictive model"""
-        if self._scenario_df is None:
-            self._scenario_df = self._calc_scenario_df()
-        return self._scenario_df
-
     def _calc_clean_df(self):
         """Compute a clean dataframe describing the scenarios and their predicted outcomes
         
@@ -139,10 +126,11 @@ class ScoreTurnModelAnalysis:
         interaction terms and is sparse. Turn each combo into an easier to read frame
         along with it's predicted score for each faction
         """
-        scenario_df = self.scenario_df.copy()
+        _stm = self.input().load()
+        scenario_df = self._calc_scenario_df()
         # Create a new dataframe of the correct size
         clean_df = pd.DataFrame(index=scenario_df.index)
-        clean_df["predicted_margin"] = self._stm.predict(scenario_df)
+        clean_df["predicted_margin"] = _stm.predict(scenario_df)
         faction_cols = [f"faction_{faction}" for faction in _FACTIONS]
         # Only the interaction columns for the faction played will have 1
         # this will return the column with that 1, which can then be used to identify the
@@ -180,39 +168,17 @@ class ScoreTurnModelAnalysis:
         # predicted margin is a column
         pivot_result = clean_df.pivot_table(
             values="predicted_margin", columns="faction", index=indexes
-        )
+        ).reset_index()
         return pivot_result
 
-    @property
-    def results_df(self):
+    def run(self):
         """Show the predicted results for various scenarios for each faction"""
-        if self._clean_df is None:
-            self._clean_df = self._calc_clean_df()
-        return self._clean_df
+        self.save(self._calc_clean_df())
 
 
-class FactionModelAnalysis:
-    def __init__(self, fraction_scenarios=0.01):
-        """"Generate scenario games and see how each faction level model performs
-        
-        Parameters
-        ----------
-        fraction_scenarios: float, default 0.01
-            There's 15 million possible Terra Mystica setups, we only want to take
-            a subsample of those possibilities or else the computer just chugs forever
-        
-        
-        TODO
-        ----
-        There's a lot of overlap code in this with the ScoreTurnModelAnalysis class
-        If I end up making a third model it will probably be worth the effor to write
-        up a base class and have them both inherit from it. As it is I'm lazy so I'm
-        just going to leave it.
-        """
-        self._fraction_scenarios = fraction_scenarios
-        self._faction_models = train_model.load_faction_models()
-        self._scenario_df = None
-        self._clean_df = None
+@d6tflow.requires(TaskFactionLevelModels)
+class TaskFactionModelAnalysis(d6tflow.tasks.TaskCSVPandas):
+    _fraction_scenarios = luigi.FloatParameter(default=0.01)
 
     def _gen_scenario(self, combo):
         """Take some combination of scores, bonuses and faction and put it in a format
@@ -221,15 +187,15 @@ class FactionModelAnalysis:
         ----------
         combo: tuple
             A combo of inputs from self.combo_generator
-        
+
         Returns
         -------
         predict_in: pd.DataFrame
             Dataframe with one row with a scenario in the correct input format
-        
+
         """
         # Doesn't matter which faction I use for this, they all have the same parameters
-        model = self._faction_models["alchemists"]
+        model = self.input().load()["alchemists"]
         input_series = pd.Series(index=model.params.index, data=0)
         input_series.loc["player_num"] = 2.5
         score_seq = combo[0]
@@ -257,17 +223,11 @@ class FactionModelAnalysis:
         )
         return scenario_df
 
-    @property
-    def scenario_df(self):
-        if self._scenario_df is None:
-            self._scenario_df = self._calc_scenario_df()
-        return self._scenario_df
-
     def _calc_clean_df(self):
         """Compute a clean dataframe describing the scenarios and their predicted outcomes"""
-        scenario_df = self.scenario_df.copy()
+        scenario_df = self._calc_scenario_df()
+        faction_models = self.input().load()
         clean_df = pd.DataFrame(index=scenario_df.index)
-        # clean_df["predicted_margin"] = self._stm.predict(scenario_df)
         for i in range(1, 7):
             col = f"score_turn_{i}"
             clean_df[col] = (
@@ -286,27 +246,20 @@ class FactionModelAnalysis:
         bonus_cols = [f"BON{i}" for i in range(2, 11)]
         clean_df["BON1"] = 0
         clean_df.loc[clean_df[bonus_cols].sum(axis="columns") == 6, "BON1"] = 1
-        for faction, model in self._faction_models.items():
+        for faction, model in faction_models.items():
             clean_df[faction] = model.predict(scenario_df)
-        clean_df = clean_df.set_index(indexes).sort_index()
+        clean_df = clean_df.set_index(indexes).sort_index().reset_index()
         return clean_df
 
-    @property
-    def results_df(self):
+    def run(self):
         """Show the predicted results for various scenarios for each faction"""
-        if self._clean_df is None:
-            self._clean_df = self._calc_clean_df()
-        return self._clean_df
+        self.save(self._calc_clean_df())
 
 
-def save_scenarios(fraction_scenarios=0.01):
-    reports_folder = Path(__file__).resolve().parents[2] / "reports"
-    stma = ScoreTurnModelAnalysis(fraction_scenarios)
-    fma = FactionModelAnalysis(fraction_scenarios)
-    fma.results_df.to_csv(reports_folder / "faction_model.csv")
-    stma.results_df.to_csv(reports_folder / "one_big_model.csv")
-    return True
+def main():
+    d6tflow.run(TaskScoreTurnModelAnalysis())
+    d6tflow.run(TaskFactionModelAnalysis())
 
 
 if __name__ == "__main__":
-    save_scenarios(0.03)
+    main()
