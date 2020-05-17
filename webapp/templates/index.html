@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}Terra Mystica Models{% endblock %}
+
+{% block page_content %}
+{{ wtf.quick_form(form) }}
+<div>
+    {% if predictions %}
+    {{ predictions }}
+    {% else %}
+    submit a scenario
+    {% endif %}
+</div>
+{% endblock %}
