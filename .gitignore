@@ -3,6 +3,9 @@ models/*
 # Saved reports
 reports/*
 
+# Binary outputs
+*.pkl
+
 #d6tflow stuff
 d6tflow_output/*
 
