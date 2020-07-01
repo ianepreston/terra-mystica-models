@@ -7,7 +7,7 @@
 {{ wtf.quick_form(form) }}
 <div>
     {% if predictions %}
-    {{ predictions }}
+    {{ predictions | safe }}
     {% else %}
     submit a scenario
     {% endif %}
