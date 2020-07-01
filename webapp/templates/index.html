@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}Terra Mystica Models{% endblock %}
+
+{% block page_content %}
+<div class="container">
+    <h1>Input Scenario</h1>
+    <hr>
+    <form action="" method="post" class="form" role="form">
+        {{ form.csrf_token() }}
+        <div class="row">
+            <div class="form-group col-md-6">
+                {% for scoreform in [form.score1, form.score2, form.score3, form.score4, form.score5, form.score6] %}
+                    {{ wtf.form_field(scoreform)}}
+                {% endfor %}
+            </div>
+            <div class="form-group col-md-6">
+                {{ wtf.form_field(form.bonuses)}}
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+    <div class="row">
+        {% if predictions %}
+        {{ predictions | safe }}
+        {% else %}
+        submit a scenario
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

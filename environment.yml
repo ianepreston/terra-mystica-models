@@ -20,6 +20,9 @@ dependencies:
   - pre_commit
   - beautifulsoup4
   - requests
+  - flask
+  - flask-bootstrap
+  - flask-wtf
   - pip:
     - python-dotenv
     - d6tflow

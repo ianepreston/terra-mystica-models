@@ -62,6 +62,19 @@ def _combo_generator(fraction_scenarios, include_factions=True):
 
 
 @d6tflow.requires(TaskScoreTurnModel)
+class TaskScoreTurnModelInputs(d6tflow.tasks.TaskPickle):
+    """Get a pandas series with the named indices required for the Score turn model
+    Otherwise I'm never going to be able to get all 785 inputs in the correct order.
+    Well, I could. But it'd be complicated
+    """
+
+    def run(self):
+        _stm = self.input().load()
+        input_series = pd.Series(index=_stm.params.index, data=0)
+        self.save(input_series)
+
+
+@d6tflow.requires(TaskScoreTurnModel)
 class TaskScoreTurnModelAnalysis(d6tflow.tasks.TaskCSVPandas):
     _fraction_scenarios = luigi.FloatParameter(default=0.01)
 
