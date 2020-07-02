@@ -1,0 +1,6 @@
+Flask
+Flask-Bootstrap
+Flask-WTF
+statsmodels
+pandas
+matplotlib
